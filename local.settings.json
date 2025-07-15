@@ -1,0 +1,13 @@
+{
+  "IsEncrypted":false,
+  "Values":{
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTINE": "node",
+    "DB_NAME": "db-srv-eu1-frmw-desa-01",
+    "DB_HOST": "db-srv-eastus-frmw-desa-01.database.windows.net",
+    "AZURE_CLIENT_ID":"ca479303-dc1e-47d0-8859-1a38039baa75",
+    "AZURE_TENANT_ID":"033a9021-e6f2-49e1-88c2-e90b79214327",
+    "AZURE_CLIENT_SECRET":"Ouh8Q~.-Rrss~gX7mkETOJlrPgrIrsuwtGdSDXxcMp"
+  },
+  "ConnectionStrings":{}
+}

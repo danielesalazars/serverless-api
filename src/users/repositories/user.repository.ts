@@ -1,11 +1,15 @@
-import { Injectable, InternalServerErrorException, ConflictException } from '@nestjs/common';
-import { User } from '../entities/user.entity';
-import { UserQueries } from './data-access/user.queries'; 
-import { SqlDatabaseService } from '@lib/external/azure/sql-database/sql-database.service'; 
+import {
+  Injectable,
+  InternalServerErrorException,
+  ConflictException,
+} from '@nestjs/common';
+import { User } from '@/users/entities/user.entity';
+import { UserQueries } from '@/users/repositories/user.queries';
+import { SqlDatabaseService } from '@/lib/external/azure/sql-database/sql-database.service';
 import * as mssql from 'mssql';
 
 @Injectable()
-export class UserRepository { 
+export class UserRepository {
   constructor(private readonly dbService: SqlDatabaseService) {}
 
   private mapRowToUser(row: any): User {
@@ -26,30 +30,40 @@ export class UserRepository {
   async findAll(): Promise<User[]> {
     try {
       const result = await this.dbService.query<User>(UserQueries.getAll);
-      return result.map(row => this.mapRowToUser(row));
+      return result.map((row) => this.mapRowToUser(row));
     } catch (error) {
       console.error('Error in UserRepository.findAll:', error.message);
-      throw new InternalServerErrorException('Database error when finding all users.');
+      throw new InternalServerErrorException(
+        'Database error when finding all users.',
+      );
     }
   }
 
   async findById(id: string): Promise<User | undefined> {
     try {
-      const result = await this.dbService.query<User>(UserQueries.getById, [id]);
+      const result = await this.dbService.query<User>(UserQueries.getById, [
+        id,
+      ]);
       return result.length ? this.mapRowToUser(result[0]) : undefined;
     } catch (error) {
       console.error('Error in UserRepository.findById:', error.message);
-      throw new InternalServerErrorException('Database error when finding user by ID.');
+      throw new InternalServerErrorException(
+        'Database error when finding user by ID.',
+      );
     }
   }
 
   async findByEmail(email: string): Promise<User | undefined> {
     try {
-      const result = await this.dbService.query<User>(UserQueries.getByEmail, [email]);
+      const result = await this.dbService.query<User>(UserQueries.getByEmail, [
+        email,
+      ]);
       return result.length ? this.mapRowToUser(result[0]) : undefined;
     } catch (error) {
       console.error('Error in UserRepository.findByEmail:', error.message);
-      throw new InternalServerErrorException('Database error when finding user by email.');
+      throw new InternalServerErrorException(
+        'Database error when finding user by email.',
+      );
     }
   }
 
@@ -64,22 +78,29 @@ export class UserRepository {
         user.is_active ?? true,
       ]);
       if (result.length === 0) {
-        throw new InternalServerErrorException('Failed to create user, no record returned.');
+        throw new InternalServerErrorException(
+          'Failed to create user, no record returned.',
+        );
       }
       return this.mapRowToUser(result[0]);
     } catch (error) {
       console.error('Error in UserRepository.create:', error.message);
-      if (error.message.includes('duplicate key') || error.message.includes('UNIQUE constraint')) {
+      if (
+        error.message.includes('duplicate key') ||
+        error.message.includes('UNIQUE constraint')
+      ) {
         throw new ConflictException('A user with this email already exists.');
       }
-      throw new InternalServerErrorException('Database error when creating user.');
+      throw new InternalServerErrorException(
+        'Database error when creating user.',
+      );
     }
   }
 
   async update(id: string, updates: Partial<User>): Promise<User | undefined> {
     const existingUser = await this.findById(id);
     if (!existingUser) {
-        return undefined; 
+      return undefined;
     }
     const mergedUser = { ...existingUser, ...updates };
 
@@ -88,25 +109,33 @@ export class UserRepository {
         mergedUser.first_name,
         mergedUser.last_name,
         mergedUser.email,
-        id, 
+        id,
       ]);
       return result.length ? this.mapRowToUser(result[0]) : undefined;
     } catch (error) {
       console.error('Error in UserRepository.update:', error.message);
-      if (error.message.includes('duplicate key') || error.message.includes('UNIQUE constraint')) {
+      if (
+        error.message.includes('duplicate key') ||
+        error.message.includes('UNIQUE constraint')
+      ) {
         throw new ConflictException('A user with this email already exists.');
       }
-      throw new InternalServerErrorException('Database error when updating user.');
+      throw new InternalServerErrorException(
+        'Database error when updating user.',
+      );
     }
   }
 
-  async delete(id: string): Promise<boolean> { // ID es string
+  async delete(id: string): Promise<boolean> {
+    // ID es string
     try {
       await this.dbService.query(UserQueries.delete, [id]);
-      return true; 
+      return true;
     } catch (error) {
       console.error('Error in UserRepository.delete:', error.message);
-      throw new InternalServerErrorException('Database error when deleting user.');
+      throw new InternalServerErrorException(
+        'Database error when deleting user.',
+      );
     }
   }
 }

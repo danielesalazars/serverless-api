@@ -2,7 +2,7 @@ import { AzureFunction, Context, HttpRequest } from '@azure/functions';
 import { INestApplicationContext, HttpException } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { UserService } from '../services/user.service';
-import { UserModule } from '../users.module';
+import { UserModule } from '../user.module';
 
 let cachedApp: INestApplicationContext | null = null;
 
@@ -47,7 +47,12 @@ const getUserFunction: AzureFunction = async function (
     if (error instanceof HttpException) {
       context.res = {
         status: error.getStatus(),
-        body: { message: error.message, ...(error.getResponse() as any).error && { error: (error.getResponse() as any).error } },
+        body: {
+          message: error.message,
+          ...((error.getResponse() as any).error && {
+            error: (error.getResponse() as any).error,
+          }),
+        },
         headers: { 'Content-Type': 'application/json' },
       };
     } else {

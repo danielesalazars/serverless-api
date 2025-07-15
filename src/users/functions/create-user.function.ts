@@ -1,13 +1,13 @@
 import { AzureFunction, Context, HttpRequest } from '@azure/functions';
-import { INestApplicationContext, ValidationPipe, HttpException } from '@nestjs/common';
+import { INestApplicationContext, HttpException } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { CreateUserDto } from '../dtos/create-user.dto';
 import { UserService } from '../services/user.service';
-import { UserModule } from '../users.module'; 
+import { UserModule } from '../user.module';
 
-let cachedApp: INestApplicationContext | null = null; 
+let cachedApp: INestApplicationContext | null = null;
 
 async function bootstrapNestApp(): Promise<INestApplicationContext> {
   if (!cachedApp) {
@@ -37,7 +37,7 @@ const createUserFunction: AzureFunction = async function (
         status: 400,
         body: {
           message: 'Validation failed',
-          errors: errors.map(err => ({
+          errors: errors.map((err) => ({
             property: err.property,
             constraints: err.constraints,
           })),
@@ -58,7 +58,12 @@ const createUserFunction: AzureFunction = async function (
     if (error instanceof HttpException) {
       context.res = {
         status: error.getStatus(),
-        body: { message: error.message, ...(error.getResponse() as any).error && { error: (error.getResponse() as any).error } },
+        body: {
+          message: error.message,
+          ...((error.getResponse() as any).error && {
+            error: (error.getResponse() as any).error,
+          }),
+        },
         headers: { 'Content-Type': 'application/json' },
       };
     } else {

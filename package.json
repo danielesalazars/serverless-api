@@ -6,10 +6,12 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && pnpm run copy-functions",
+    "copy-functions": "node scripts/copy-functions.js",
     "start": "func start",
     "start:dev": "func start --verbose",
     "start:debug": "func start --inspect",
+    "start:func": "pnpm run build && func start --javascript",
     "lint": "eslint \"src/**/*.ts\" --fix",
     "format": "prettier --write \"src/**/*.ts\"",
     "test": "jest",
@@ -27,7 +29,9 @@
     "class-validator": "^0.14.2",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "mssql": "^10.0.1",
+    "bcrypt": "^5.1.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
@@ -35,6 +39,8 @@
     "@nestjs/testing": "^11.0.1",
     "@types/jest": "29.5.14",
     "@types/node": "^20.19.7",
+    "@types/mssql": "^9.1.0",
+    "@types/bcrypt": "^5.0.2",
     "eslint": "^9.0.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
@@ -45,7 +51,8 @@
     "ts-node": "10.9.2",
     "tsconfig-paths": "4.2.0",
     "typescript": "^5.4.5",
-    "typescript-eslint": "^8.37.0"
+    "typescript-eslint": "^8.37.0",
+    "fs-extra": "^11.1.0"
   },
   "jest": {
     "moduleFileExtensions": [

@@ -26,7 +26,7 @@ export default tseslint.config(
   },
   {
     rules: {
-      'prettier/prettier': 'off',
+      // 'prettier/prettier': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-floating-promises': 'warn',
       '@typescript-eslint/no-unsafe-argument': 'off',

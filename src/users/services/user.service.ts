@@ -1,5 +1,9 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { UserRepository } from '../repositories/user.repository'; 
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
+import { UserRepository } from '../repositories/user.repository';
 import { CreateUserDto } from '../dtos/create-user.dto';
 import { UpdateUserDto } from '../dtos/update-user.dto';
 import { User } from '../entities/user.entity';
@@ -9,8 +13,12 @@ import * as bcrypt from 'bcrypt';
 export class UserService {
   constructor(private readonly userRepository: UserRepository) {}
 
-  async createUser(createUserDto: CreateUserDto): Promise<Omit<User, 'password_hash'>> {
-    const existingUser = await this.userRepository.findByEmail(createUserDto.email);
+  async createUser(
+    createUserDto: CreateUserDto,
+  ): Promise<Omit<User, 'password_hash'>> {
+    const existingUser = await this.userRepository.findByEmail(
+      createUserDto.email,
+    );
     if (existingUser) {
       throw new ConflictException('User with this email already exists.');
     }
@@ -38,7 +46,10 @@ export class UserService {
     return userWithoutPasswordHash;
   }
 
-  async updateUser(id: string, updateUserDto: UpdateUserDto): Promise<Omit<User, 'password_hash'>> {
+  async updateUser(
+    id: string,
+    updateUserDto: UpdateUserDto,
+  ): Promise<Omit<User, 'password_hash'>> {
     const user = await this.userRepository.findById(id);
     if (!user) {
       throw new NotFoundException(`User with ID "${id}" not found.`);
