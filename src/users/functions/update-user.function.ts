@@ -1,4 +1,9 @@
-import { AzureFunction, Context, HttpRequest } from '@azure/functions';
+import {
+  app,
+  InvocationContext,
+  HttpRequest,
+  HttpResponseInit,
+} from '@azure/functions';
 import { INestApplicationContext, HttpException } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { plainToInstance } from 'class-transformer';
@@ -19,71 +24,82 @@ async function bootstrapNestApp(): Promise<INestApplicationContext> {
   return cachedApp;
 }
 
-const updateUserFunction: AzureFunction = async function (
-  context: Context,
-  req: HttpRequest,
-): Promise<void> {
-  context.log('HTTP trigger function processed a request for update-user.');
+app.http('update-user', {
+  methods: ['PUT'],
+  authLevel: 'function',
+  route: 'api/users/{id}',
+  handler: async (
+    req: HttpRequest,
+    context: InvocationContext,
+  ): Promise<HttpResponseInit> => {
+    context.log('HTTP trigger function processed a request for update-user.');
 
-  try {
-    const app = await bootstrapNestApp();
-    const userService = app.get(UserService);
+    try {
+      const app = await bootstrapNestApp();
+      const userService = app.get(UserService);
 
-    const userId = req.params?.id;
-    if (!userId) {
-      context.res = {
-        status: 400,
-        body: { message: 'User ID is required in the path.' },
+      const userId = req.params?.id;
+      if (!userId) {
+        return {
+          status: 400,
+          jsonBody: { message: 'User ID is required in the path.' },
+          headers: { 'Content-Type': 'application/json' },
+        };
+      }
+
+      const reqBody = await req.json();
+      const updateUserDto = plainToInstance(UpdateUserDto, reqBody);
+      const errors = await validate(updateUserDto);
+
+      if (errors.length > 0) {
+        return {
+          status: 400,
+          jsonBody: {
+            message: 'Validation failed',
+            errors: errors.map((err) => ({
+              property: err.property,
+              constraints: err.constraints,
+            })),
+          },
+          headers: { 'Content-Type': 'application/json' },
+        };
+      }
+
+      const updatedUser = await userService.updateUser(userId, updateUserDto);
+
+      if (!updatedUser) {
+        return {
+          status: 404,
+          jsonBody: { message: `User with ID ${userId} not found.` },
+          headers: { 'Content-Type': 'application/json' },
+        };
+      }
+
+      return {
+        status: 200,
+        jsonBody: updatedUser,
         headers: { 'Content-Type': 'application/json' },
       };
-      return;
+    } catch (error) {
+      context.log('Error updating user:', error);
+      if (error instanceof HttpException) {
+        return {
+          status: error.getStatus(),
+          jsonBody: {
+            message: error.message,
+            ...((error.getResponse() as any).error && {
+              error: (error.getResponse() as any).error,
+            }),
+          },
+          headers: { 'Content-Type': 'application/json' },
+        };
+      } else {
+        return {
+          status: 500,
+          jsonBody: { message: 'Internal server error', error: error.message },
+          headers: { 'Content-Type': 'application/json' },
+        };
+      }
     }
-
-    const updateUserDto = plainToInstance(UpdateUserDto, req.body);
-    const errors = await validate(updateUserDto);
-
-    if (errors.length > 0) {
-      context.res = {
-        status: 400,
-        body: {
-          message: 'Validation failed',
-          errors: errors.map((err) => ({
-            property: err.property,
-            constraints: err.constraints,
-          })),
-        },
-        headers: { 'Content-Type': 'application/json' },
-      };
-      return;
-    }
-
-    const updatedUser = await userService.updateUser(userId, updateUserDto);
-    context.res = {
-      status: 200,
-      body: updatedUser,
-      headers: { 'Content-Type': 'application/json' },
-    };
-  } catch (error) {
-    context.log.error('Error updating user:', error);
-    if (error instanceof HttpException) {
-      context.res = {
-        status: error.getStatus(),
-        body: {
-          message: error.message,
-          ...((error.getResponse() as any).error && {
-            error: (error.getResponse() as any).error,
-          }),
-        },
-        headers: { 'Content-Type': 'application/json' },
-      };
-    } else {
-      context.res = {
-        status: 500,
-        body: { message: 'Internal server error', error: error.message },
-        headers: { 'Content-Type': 'application/json' },
-      };
-    }
-  }
-};
-
-export default updateUserFunction;
+  },
+});

@@ -6,14 +6,16 @@ import {
 import { User } from '@/users/entities/user.entity';
 import { UserQueries } from '@/users/repositories/user.queries';
 import { SqlDatabaseService } from '@/lib/external/azure/sql-database/sql-database.service';
-import * as mssql from 'mssql';
 
 @Injectable()
 export class UserRepository {
   constructor(private readonly dbService: SqlDatabaseService) {}
 
-  private mapRowToUser(row: any): User {
-    if (!row) return null;
+  private mapRowToUser(row: any): User | undefined {
+    if (!row) {
+      return undefined;
+    }
+
     return {
       id: row.id,
       first_name: row.first_name,
@@ -30,7 +32,9 @@ export class UserRepository {
   async findAll(): Promise<User[]> {
     try {
       const result = await this.dbService.query<User>(UserQueries.getAll);
-      return result.map((row) => this.mapRowToUser(row));
+      return result
+        .map((row) => this.mapRowToUser(row))
+        .filter((user): user is User => user != undefined);
     } catch (error) {
       console.error('Error in UserRepository.findAll:', error.message);
       throw new InternalServerErrorException(
@@ -82,7 +86,11 @@ export class UserRepository {
           'Failed to create user, no record returned.',
         );
       }
-      return this.mapRowToUser(result[0]);
+      const createdUser = this.mapRowToUser(result[0]);
+      if (createdUser === undefined) {
+        throw new InternalServerErrorException('Failed to map created user.');
+      }
+      return createdUser;
     } catch (error) {
       console.error('Error in UserRepository.create:', error.message);
       if (

@@ -1,4 +1,9 @@
-import { AzureFunction, Context, HttpRequest } from '@azure/functions';
+import {
+  app,
+  InvocationContext,
+  HttpRequest,
+  HttpResponseInit,
+} from '@azure/functions';
 import { INestApplicationContext, HttpException } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { UserService } from '../services/user.service';
@@ -15,54 +20,66 @@ async function bootstrapNestApp(): Promise<INestApplicationContext> {
   return cachedApp;
 }
 
-const getUserFunction: AzureFunction = async function (
-  context: Context,
-  req: HttpRequest,
-): Promise<void> {
-  context.log('HTTP trigger function processed a request for get-user-by-id.');
+app.http('get-user', {
+  methods: ['GET'],
+  authLevel: 'function',
+  route: 'api/users/{id}',
+  handler: async (
+    req: HttpRequest,
+    context: InvocationContext,
+  ): Promise<HttpResponseInit> => {
+    context.log(
+      'HTTP trigger function processed a request for get-user-by-id.',
+    );
 
-  try {
-    const app = await bootstrapNestApp();
-    const userService = app.get(UserService);
+    try {
+      const app = await bootstrapNestApp();
+      const userService = app.get(UserService);
 
-    const id = req.params?.id;
-    if (!id) {
-      context.res = {
-        status: 400,
-        body: { message: 'User ID is required in the path.' },
+      const userId = req.params?.id;
+      if (!userId) {
+        return {
+          status: 400,
+          jsonBody: { message: 'User ID is required in the path.' },
+          headers: { 'Content-Type': 'application/json' },
+        };
+      }
+
+      const user = await userService.findUserById(userId);
+
+      if (!user) {
+        return {
+          status: 404, // OK
+          jsonBody: { message: `User with ID ${userId} not found.` },
+          headers: { 'Content-Type': 'application/json' },
+        };
+      }
+
+      return {
+        status: 200, // OK
+        jsonBody: user,
         headers: { 'Content-Type': 'application/json' },
       };
-      return;
+    } catch (error) {
+      context.log('Error getting user:', error);
+      if (error instanceof HttpException) {
+        return {
+          status: error.getStatus(),
+          jsonBody: {
+            message: error.message,
+            ...((error.getResponse() as any).error && {
+              error: (error.getResponse() as any).error,
+            }),
+          },
+          headers: { 'Content-Type': 'application/json' },
+        };
+      } else {
+        return {
+          status: 500,
+          jsonBody: { message: 'Internal server error', error: error.message },
+          headers: { 'Content-Type': 'application/json' },
+        };
+      }
     }
-
-    const user = await userService.findUserById(id);
-
-    context.res = {
-      status: 200, // OK
-      body: user,
-      headers: { 'Content-Type': 'application/json' },
-    };
-  } catch (error) {
-    context.log.error('Error getting user:', error);
-    if (error instanceof HttpException) {
-      context.res = {
-        status: error.getStatus(),
-        body: {
-          message: error.message,
-          ...((error.getResponse() as any).error && {
-            error: (error.getResponse() as any).error,
-          }),
-        },
-        headers: { 'Content-Type': 'application/json' },
-      };
-    } else {
-      context.res = {
-        status: 500,
-        body: { message: 'Internal server error', error: error.message },
-        headers: { 'Content-Type': 'application/json' },
-      };
-    }
-  }
-};
-
-export default getUserFunction;
+  },
+});

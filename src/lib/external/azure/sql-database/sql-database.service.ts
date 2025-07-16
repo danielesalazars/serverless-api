@@ -1,6 +1,6 @@
 import * as mssql from 'mssql';
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { sqlDatabaseConfig } from '@lib/external/azure/sql-database/sql-database.config';
+import { sqlDatabaseConfig } from '@/lib/external/azure/sql-database/sql-database.config';
 
 @Injectable()
 export class SqlDatabaseService implements OnModuleInit, OnModuleDestroy {

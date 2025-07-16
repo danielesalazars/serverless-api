@@ -7,7 +7,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "tsc -p tsconfig.build.json && pnpm run copy-functions",
-    "copy-functions": "node scripts/copy-functions.js",
+    "copy-functions": "node scripts/copy-function.js",
     "start": "func start",
     "start:dev": "func start --verbose",
     "start:debug": "func start --inspect",

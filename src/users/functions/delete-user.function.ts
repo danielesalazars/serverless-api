@@ -1,4 +1,9 @@
-import { AzureFunction, Context, HttpRequest } from '@azure/functions';
+import {
+  app,
+  InvocationContext,
+  HttpRequest,
+  HttpResponseInit,
+} from '@azure/functions';
 import { INestApplicationContext, HttpException } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { UserService } from '../services/user.service';
@@ -15,54 +20,62 @@ async function bootstrapNestApp(): Promise<INestApplicationContext> {
   return cachedApp;
 }
 
-const deleteUserFunction: AzureFunction = async function (
-  context: Context,
-  req: HttpRequest,
-): Promise<void> {
-  context.log('HTTP trigger function processed a request for delete-user.');
+app.http('delete-user', {
+  methods: ['POST'],
+  authLevel: 'function',
+  route: 'api/users/{id}',
+  handler: async (
+    req: HttpRequest,
+    context: InvocationContext,
+  ): Promise<HttpResponseInit> => {
+    context.log('HTTP trigger function processed a request for delete-user.');
 
-  try {
-    const app = await bootstrapNestApp();
-    const userService = app.get(UserService);
+    try {
+      const app = await bootstrapNestApp();
+      const userService = app.get(UserService);
 
-    const userId = req.params?.id;
-    if (!userId) {
-      context.res = {
-        status: 400,
-        body: { message: 'User ID is required in the path.' },
-        headers: { 'Content-Type': 'application/json' },
+      const userId = req.params?.id;
+      if (!userId) {
+        return {
+          status: 400,
+          jsonBody: { message: 'User ID is required in the path.' },
+          headers: { 'Content-Type': 'application/json' },
+        };
+      }
+
+      const deleteCount = await userService.deleteUser(userId);
+
+      if (Number(deleteCount) === 0) {
+        return {
+          status: 404,
+          jsonBody: { message: `User with ID ${userId} not found.` },
+          headers: { 'Content-Type': 'application/json' },
+        };
+      }
+
+      return {
+        status: 204,
       };
-      return;
+    } catch (error) {
+      context.log('Error deleting user:', error);
+      if (error instanceof HttpException) {
+        return {
+          status: error.getStatus(),
+          jsonBody: {
+            message: error.message,
+            ...((error.getResponse() as any).error && {
+              error: (error.getResponse() as any).error,
+            }),
+          },
+          headers: { 'Content-Type': 'application/json' },
+        };
+      } else {
+        return {
+          status: 500,
+          jsonBody: { message: 'Internal server error', error: error.message },
+          headers: { 'Content-Type': 'application/json' },
+        };
+      }
     }
-
-    await userService.deleteUser(userId);
-
-    context.res = {
-      status: 204,
-      body: null,
-      headers: { 'Content-Type': 'application/json' },
-    };
-  } catch (error) {
-    context.log.error('Error deleting user:', error);
-    if (error instanceof HttpException) {
-      context.res = {
-        status: error.getStatus(),
-        body: {
-          message: error.message,
-          ...((error.getResponse() as any).error && {
-            error: (error.getResponse() as any).error,
-          }),
-        },
-        headers: { 'Content-Type': 'application/json' },
-      };
-    } else {
-      context.res = {
-        status: 500,
-        body: { message: 'Internal server error', error: error.message },
-        headers: { 'Content-Type': 'application/json' },
-      };
-    }
-  }
-};
-
-export default deleteUserFunction;
+  },
+});
